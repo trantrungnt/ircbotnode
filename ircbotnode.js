@@ -70,14 +70,11 @@ var executeCmd = function (socket, peer, botCmd) {
         cmd = botCmd;
     }
 
-    
+    console.log('cmd:', cmd);
+    console.log('args:', args);            
     if (cmdList.hasOwnProperty(cmd)) {
-        console.log('cmd:', cmd);
-        console.log('args:', args);        
         cmdList[cmd](socket, peer, args);
     } else {
-        console.log('cmd:', cmd);
-        console.log('args:', args);
         cmdList['dontcare'](socket, peer, args);
     }
 }
