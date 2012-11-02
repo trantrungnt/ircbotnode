@@ -141,7 +141,6 @@ connect();
 /*
   Define BOT Command here
   List of command to control the irc bot
-  It a json pair:
   command : function (socket, peer, args)
  */
 var cmdList = new Object()
