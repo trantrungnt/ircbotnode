@@ -24,6 +24,7 @@
  */
 
 var net = require('net');
+var fs = require('fs');
 var format = require('util').format;
 var serverAddr =  'irc.freenode.net';
 var serverPort = 6667;
@@ -31,6 +32,7 @@ var botname = 'kgcdbot';
 var channelname = '#kgcd';
 var callBotStr = 'bot>'; // Command to wake up the bot
 var encoding = 'utf8';
+var logBot = null;
 
 var sendMsg = function (socket,cmd, params) {
     data = [];
@@ -94,6 +96,9 @@ var processMsg = function (socket, msg) {
         time = new Date().toString();
         peer = getPeerName(msg);
         text = getTextMsg(msg);
+        if (logBot) {
+            logBot.write(peer + ' (' + time +'):' + text + '\n');
+        }
         console.log('Peer:', peer);
         console.log('Text:', text);
         if (text.indexOf(callBotStr) == 0) {
@@ -152,4 +157,22 @@ cmdList.dontcare = function (socket, peer, args) {
 
 cmdList.help = function (socket, peer, args) {
     sendPrivmsg(socket, 'Try bot>{command} {args}. Ex: bot>hello world');
+}
+
+cmdList.startLog = function(socket, peer,args) {
+    time = new Date().toTimeString();
+    logBot = fs.createWriteStream(time + '.log', {encoding: 'utf8'});
+    logBot.write('Start logging at ' + time);
+    sendPrivmsg(socket, 'Start logging at ' + time);    
+}
+
+cmdList.stopLog = function(socket, peer,args) {
+    if (logBot) {
+        logBot.write('Stop logging at ' + time);
+        logBot.end();
+        logBot = null;
+        sendPrivmsg(socket, 'Stop logging at ' + time);    
+    } else {
+        sendPrivmsg(socket, 'There is no logging activity');
+    }
 }
