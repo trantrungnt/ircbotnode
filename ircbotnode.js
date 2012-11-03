@@ -30,9 +30,10 @@ var serverAddr =  'irc.freenode.net';
 var serverPort = 6667;
 var botname = 'kgcdbot';
 var channelname = '#kgcd';
-var callBotStr = 'bot>'; // Command to wake up the bot
+var callBotStr = 'bot>'; // String to wake the bot up
 var encoding = 'utf8';
 var logBot = null;
+var lastPeerMsg;
 
 var sendMsg = function (socket,cmd, params) {
     data = [];
@@ -93,11 +94,12 @@ var processMsg = function (socket, msg) {
         return sendPong(socket);
     }
     if (data[1] == 'PRIVMSG') {
-        time = new Date().toString();
+        lastPeerMsg = new Date();
+        time = lastPeerMsg.toTimeString()
         peer = getPeerName(msg);
         text = getTextMsg(msg);
         if (logBot) {
-            logBot.write(peer + ' (' + time +'):' + text + '\n');
+            logBot.write(format('%s (%s): %s\n',peer, time, text));
         }
         console.log('Peer:', peer);
         console.log('Text:', text);
@@ -107,6 +109,18 @@ var processMsg = function (socket, msg) {
             executeCmd(socket, peer, botCmd);
         }
     }
+}
+
+var botCycle = function (socket) {
+    var period = 1 * 60000; // 5 minutes
+    var idle = 1;
+    setInterval(function () {
+        /* Close the file stream if nobody continues talking*/
+        time = (new Date() - lastPeerMsg) / 60000;
+        if (time > idle) {
+            cmdList.stopLog(socket, null, null);
+        }
+    }, period);
 }
 
 var connect = function () {
@@ -134,8 +148,10 @@ var connect = function () {
     });
 
     socket.connect(serverPort, serverAddr);
+    botCycle(socket);
 }
 
+/* Start the bot by connecting to IRC server*/
 connect();
 
 /*
@@ -159,19 +175,22 @@ cmdList.help = function (socket, peer, args) {
 }
 
 cmdList.startLog = function(socket, peer,args) {
-    time = new Date().toTimeString();
+    time = new Date().toString();
     logBot = fs.createWriteStream(time + '.log', {encoding: 'utf8'});
     logBot.write('Start logging at ' + time);
     sendPrivmsg(socket, 'Start logging at ' + time);    
 }
 
 cmdList.stopLog = function(socket, peer,args) {
+    time = new Date().toString();
     if (logBot) {
         logBot.write('Stop logging at ' + time);
         logBot.end();
         logBot = null;
         sendPrivmsg(socket, 'Stop logging at ' + time);    
     } else {
-        sendPrivmsg(socket, 'There is no logging activity');
+        /* if peer == null then the function was invoked by the program itself*/
+        if (peer != null)
+            sendPrivmsg(socket, 'There is no logging activity');
     }
 }
